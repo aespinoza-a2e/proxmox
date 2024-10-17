@@ -126,6 +126,13 @@ session     optional      pam_ldap.so
 session     required      pam_mkhomedir.so skel=/etc/skel umask=077
 EOF'
   
+  # Configure SSH to allow all users
+  echo "Configuring SSH to allow all users..."
+  if grep -q '^AllowUsers' /etc/ssh/sshd_config; then
+    sudo sed -i 's/^AllowUsers.*/#&/' /etc/ssh/sshd_config
+  fi
+  echo "AllowUsers *" | sudo tee -a /etc/ssh/sshd_config > /dev/null
+
   # Restart necessary services
   echo "Restarting services..."
   systemctl restart nslcd || echo "nslcd service not found, skipping..."
