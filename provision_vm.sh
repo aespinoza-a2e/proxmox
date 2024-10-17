@@ -106,7 +106,7 @@ account     sufficient    pam_localuser.so
 account     sufficient    pam_succeed_if.so uid < 1000 quiet
 account     [default=bad success=ok user_unknown=ignore] pam_ldap.so
 account     required      pam_permit.so
-account     required      pam_exec.so /usr/local/sbin/add_to_sudo.sh
+
 EOF'
   
   sudo bash -c 'cat <<EOF >> /etc/pam.d/common-password
@@ -146,13 +146,10 @@ EOF'
 </pam_mount>
 EOF'
 
-  # Create script to add users to sudo group
-  echo "Creating script to add users to sudo group..."
-  sudo bash -c 'cat <<EOF > /usr/local/sbin/add_to_sudo.sh
-#!/bin/bash
-usermod -aG sudo "\$PAM_USER"
-EOF'
-  sudo chmod +x /usr/local/sbin/add_to_sudo.sh
+  # Modify sudoers to add LDAP users
+  echo "Modifying sudoers file to add LDAP users..."
+  echo "%sudousers ALL=(ALL) ALL" | sudo tee -a /etc/sudoers > /dev/null
+  echo "%adminusers ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers > /dev/null
 
   # Display IP address and hostname
   IP_ADDR=$(hostname -I | awk '{print $1}')
