@@ -140,15 +140,15 @@ EOF'
   # Create CIFS mount entry dynamically on user login using pam_mount
   echo "Configuring pam_mount for CIFS share mounting..."
   sudo bash -c 'cat <<EOF > /etc/security/pam_mount.conf.xml
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version=\"1.0\" encoding=\"utf-8\"?>
 <pam_mount>
-  <volume user="*" fstype="cifs" server="$CIFS_SERVER" path="$CIFS_PATH/%(USER)" mountpoint="/home/%(USER)/nfs_lab" options="rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD" />
+  <volume user=\"*\" fstype=\"cifs\" server=\"$CIFS_SERVER\" path=\"$CIFS_PATH/%(USER)\" mountpoint=\"/home/%(USER)/nfs_lab\" options=\"rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD\" />
 </pam_mount>
-EOF'
+EOF"
 
   # Modify sudoers to add LDAP users
   echo "Modifying sudoers file to add LDAP users..."
-  echo "%sudousers ALL=(ALL) ALL" | sudo tee -a /etc/sudoers > /dev/null
+  echo "%users ALL=(ALL) ALL" | sudo tee -a /etc/sudoers > /dev/null
   echo "%adminusers ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers > /dev/null
 
   # Display IP address and hostname
