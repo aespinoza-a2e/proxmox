@@ -12,14 +12,15 @@ header_info() {
  //_\\  __) / _ \   / /\/ _ \/ __| '_ \| '_ \ / _ \| |/ _ \ / _` | |/ _ \/ __|
 /  _  \/ __/  __/  / / |  __/ (__| | | | | | | (_) | | (_) | (_| | |  __/\__ \
 \_/ \_/_____\___|  \/   \___|\___|_| |_|_| |_|\___/|_|\___/ \__, |_|\___||___/
-
+                                                        |___/                
 EOF
 }
+
 RD=$(echo "\033[01;31m")
 YW=$(echo "\033[33m")
 GN=$(echo "\033[1;92m")
 CL=$(echo "\033[m")
-BFR="\\r\\033[K"
+BFR="\r\033[K"
 HOLD="-"
 CM="${GN}✓${CL}"
 CROSS="${RD}✗${CL}"
@@ -57,62 +58,65 @@ start_routines() {
   
   # Install necessary packages
   echo "Installing necessary packages..."
-  sudo dnf install -y openldap-clients nss-pam-ldapd openssh-server xrdp
+  sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp
   
   # Add all users to sudo group
   echo "Adding all users to sudo group..."
   for user in $(getent passwd | awk -F: '$3 >= 1000 {print $1}'); do
-    usermod -aG wheel "$user"
+    usermod -aG sudo "$user"
   done
   
   # Configure LDAP client
   echo "Configuring LDAP client..."
-  authconfig --enableldap --enableldapauth --ldapserver=$LDAP_SERVER --ldapbasedn=$BASE_DN --enablemkhomedir --update
-  
-  # Configure PAM
-  echo "Configuring PAM..."
-  authconfig --enablelocauthorize --enableldap --enableldapauth --ldapserver=$LDAP_SERVER --ldapbasedn=$BASE_DN --enablemkhomedir --update
-  
+  sudo bash -c "echo 'URI $LDAP_SERVER' >> /etc/ldap/ldap.conf"
+  sudo bash -c "echo 'BASE $BASE_DN' >> /etc/ldap/ldap.conf"
+
   # Configure NSS
   echo "Configuring NSS..."
-  bash -c 'cat <<EOF >> /etc/nsswitch.conf
-  passwd:     files sss ldap
-  shadow:     files sss ldap
-  group:      files sss ldap
-  EOF'
+  sudo bash -c 'cat <<EOF >> /etc/nsswitch.conf
+passwd:     files ldap
+shadow:     files ldap
+group:      files ldap
+EOF'
   
   # Configure PAM for LDAP
   echo "Configuring PAM for LDAP..."
-  bash -c 'cat <<EOF >> /etc/pam.d/system-auth
-  auth        required      pam_env.so
-  auth        sufficient    pam_unix.so try_first_pass
-  auth        requisite     pam_succeed_if.so uid >= 1000 quiet_success
-  auth        sufficient    pam_ldap.so use_first_pass
-  auth        required      pam_deny.so
+  sudo bash -c 'cat <<EOF >> /etc/pam.d/common-auth
+auth        required      pam_env.so
+auth        sufficient    pam_unix.so try_first_pass
+auth        requisite     pam_succeed_if.so uid >= 1000 quiet_success
+auth        sufficient    pam_ldap.so use_first_pass
+auth        required      pam_deny.so
+EOF'
   
-  account     required      pam_unix.so
-  account     sufficient    pam_localuser.so
-  account     sufficient    pam_succeed_if.so uid < 1000 quiet
-  account     [default=bad success=ok user_unknown=ignore] pam_ldap.so
-  account     required      pam_permit.so
+  sudo bash -c 'cat <<EOF >> /etc/pam.d/common-account
+account     required      pam_unix.so
+account     sufficient    pam_localuser.so
+account     sufficient    pam_succeed_if.so uid < 1000 quiet
+account     [default=bad success=ok user_unknown=ignore] pam_ldap.so
+account     required      pam_permit.so
+EOF'
   
-  password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
-  password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok
-  password    sufficient    pam_ldap.so use_authtok
-  password    required      pam_deny.so
+  sudo bash -c 'cat <<EOF >> /etc/pam.d/common-password
+password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
+password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok
+password    sufficient    pam_ldap.so use_authtok
+password    required      pam_deny.so
+EOF'
   
-  session     optional      pam_keyinit.so revoke
-  session     required      pam_limits.so
-  session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
-  session     required      pam_unix.so
-  session     optional      pam_ldap.so
-  session     optional      pam_mkhomedir.so skel=/etc/skel umask=077
-  EOF'
+  sudo bash -c 'cat <<EOF >> /etc/pam.d/common-session
+session     optional      pam_keyinit.so revoke
+session     required      pam_limits.so
+session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+session     required      pam_unix.so
+session     optional      pam_ldap.so
+session     optional      pam_mkhomedir.so skel=/etc/skel umask=077
+EOF'
   
   # Restart necessary services
   echo "Restarting services..."
-  systemctl restart nslcd
-  systemctl enable --now sshd xrdp
+  systemctl restart nslcd || echo "nslcd service not found, skipping..."
+  systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
   
   echo "LDAP client configuration completed."
 }
