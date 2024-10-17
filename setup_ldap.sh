@@ -41,7 +41,16 @@ start_routines() {
     echo "Please run as root"
     exit
   fi
-  
+
+  # Get new hostname from user
+  NEW_HOSTNAME=$(whiptail --inputbox "Enter the new hostname for this PC:" 8 78 --title "Hostname Configuration" 3>&1 1>&2 2>&3)
+  if [ $? -ne 0 ]; then
+    echo "User cancelled the input. Exiting."
+    exit 1
+  fi
+  echo "Setting hostname to $NEW_HOSTNAME..."
+  hostnamectl set-hostname "$NEW_HOSTNAME"
+
   # Get password from user
   PASSWORD=$(whiptail --passwordbox "Enter the LDAP bind password:" 8 78 --title "LDAP Configuration" 3>&1 1>&2 2>&3)
   
@@ -58,7 +67,11 @@ start_routines() {
   
   # Install necessary packages
   echo "Installing necessary packages..."
-  sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp
+  sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils
+
+  # Start avahi-daemon service
+  echo "Starting avahi-daemon service..."
+  systemctl enable --now avahi-daemon
   
   # Add all users to sudo group
   echo "Adding all users to sudo group..."
@@ -110,14 +123,36 @@ session     required      pam_limits.so
 session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
 session     required      pam_unix.so
 session     optional      pam_ldap.so
-session     optional      pam_mkhomedir.so skel=/etc/skel umask=077
+session     required      pam_mkhomedir.so skel=/etc/skel umask=077
 EOF'
   
   # Restart necessary services
   echo "Restarting services..."
   systemctl restart nslcd || echo "nslcd service not found, skipping..."
   systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
+
+  # Create script to mount CIFS share on user login
+  echo "Creating CIFS mount script..."
+  sudo bash -c 'cat <<EOF > /etc/profile.d/mount_cifs.sh
+#!/bin/bash
+USER=\$(whoami)
+USER_HOME="/home/\$USER"
+NFS_MOUNT="\$USER_HOME/nfs_lab"
+CIFS_SHARE="//10.10.20.5/LAB\040User/\$USER"
+
+if [ ! -d "\$NFS_MOUNT" ]; then
+  mkdir -p "\$NFS_MOUNT"
+fi
+if ! mountpoint -q "\$NFS_MOUNT"; then
+  mount -t cifs -o rw,dir_mode=0777,file_mode=0777,vers=2.0,username=FRLAdmin,password=abB6k02KOHpe "\$CIFS_SHARE" "\$NFS_MOUNT"
+fi
+EOF'
+  chmod +x /etc/profile.d/mount_cifs.sh
   
+  # Display IP address and hostname
+  IP_ADDR=$(hostname -I | awk '{print $1}')
+  echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
+  echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
   echo "LDAP client configuration completed."
 }
 start_routines
