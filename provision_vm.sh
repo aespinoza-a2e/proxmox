@@ -64,20 +64,17 @@ start_routines() {
   BASE_DN="dc=a2e,dc=test"
   BIND_DN="cn=admin,dc=example,dc=com"
   BIND_PASSWORD="$PASSWORD"
+  CIFS_USERNAME="FRLAdmin"
+  CIFS_PASSWORD="abB6k02KOHpe"
+  CIFS_SERVER="//10.10.20.5/LAB\040User"
   
   # Install necessary packages
   echo "Installing necessary packages..."
-  sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils
+  sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils libpam-mount
 
   # Start avahi-daemon service
   echo "Starting avahi-daemon service..."
   systemctl enable --now avahi-daemon
-  
-  # Add all users to sudo group
-  echo "Adding all users to sudo group..."
-  for user in $(getent passwd | awk -F: '$3 >= 1000 {print $1}'); do
-    usermod -aG sudo "$user"
-  done
   
   # Configure LDAP client
   echo "Configuring LDAP client..."
@@ -138,24 +135,18 @@ EOF'
   systemctl restart nslcd || echo "nslcd service not found, skipping..."
   systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
 
-  # Create script to mount CIFS share on user login
-  echo "Creating CIFS mount script..."
-  sudo bash -c 'cat <<EOF > /etc/profile.d/mount_cifs.sh
-#!/bin/bash
-USER=\$(whoami)
-USER_HOME="/home/\$USER"
-NFS_MOUNT="\$USER_HOME/nfs_lab"
-CIFS_SHARE="//10.10.20.5/LAB\040User/\$USER"
-
-if [ ! -d "\$NFS_MOUNT" ]; then
-  mkdir -p "\$NFS_MOUNT"
-fi
-if ! mountpoint -q "\$NFS_MOUNT"; then
-  mount -t cifs -o rw,dir_mode=0777,file_mode=0777,vers=2.0,username=FRLAdmin,password=abB6k02KOHpe "\$CIFS_SHARE" "\$NFS_MOUNT"
-fi
+  # Create CIFS mount entry dynamically on user login using pam_mount
+  echo "Configuring pam_mount for CIFS share mounting..."
+  sudo bash -c 'cat <<EOF >> /etc/security/pam_mount.conf.xml
+<volume user="*" fstype="cifs" server="10.10.20.5" path="/LAB\040User/%(USER)" mountpoint="/home/%(USER)/nfs_lab" options="rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD" />
 EOF'
-  chmod +x /etc/profile.d/mount_cifs.sh
-  
+
+  # Configure PAM to add LDAP users to sudo group dynamically
+  echo "Configuring PAM to add LDAP users to sudo group..."
+  sudo bash -c 'cat <<EOF >> /etc/pam.d/common-account
+account     required      pam_succeed_if.so user ingroup ldapusers || groupadd sudo
+EOF'
+
   # Display IP address and hostname
   IP_ADDR=$(hostname -I | awk '{print $1}')
   echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
