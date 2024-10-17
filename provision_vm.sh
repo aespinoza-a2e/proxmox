@@ -66,7 +66,8 @@ start_routines() {
   BIND_PASSWORD="$PASSWORD"
   CIFS_USERNAME="FRLAdmin"
   CIFS_PASSWORD="abB6k02KOHpe"
-  CIFS_SERVER="//10.10.20.5/LAB\040User"
+  CIFS_SERVER="10.10.20.5"
+  CIFS_PATH="/LAB\040User"
   
   # Install necessary packages
   echo "Installing necessary packages..."
@@ -105,6 +106,7 @@ account     sufficient    pam_localuser.so
 account     sufficient    pam_succeed_if.so uid < 1000 quiet
 account     [default=bad success=ok user_unknown=ignore] pam_ldap.so
 account     required      pam_permit.so
+account     required      pam_exec.so /usr/local/sbin/add_to_sudo.sh
 EOF'
   
   sudo bash -c 'cat <<EOF >> /etc/pam.d/common-password
@@ -137,15 +139,20 @@ EOF'
 
   # Create CIFS mount entry dynamically on user login using pam_mount
   echo "Configuring pam_mount for CIFS share mounting..."
-  sudo bash -c 'cat <<EOF >> /etc/security/pam_mount.conf.xml
-<volume user="*" fstype="cifs" server="10.10.20.5" path="/LAB\040User/%(USER)" mountpoint="/home/%(USER)/nfs_lab" options="rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD" />
+  sudo bash -c 'cat <<EOF > /etc/security/pam_mount.conf.xml
+<?xml version="1.0" encoding="utf-8"?>
+<pam_mount>
+  <volume user="*" fstype="cifs" server="$CIFS_SERVER" path="$CIFS_PATH/%(USER)" mountpoint="/home/%(USER)/nfs_lab" options="rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD" />
+</pam_mount>
 EOF'
 
-  # Configure PAM to add LDAP users to sudo group dynamically
-  echo "Configuring PAM to add LDAP users to sudo group..."
-  sudo bash -c 'cat <<EOF >> /etc/pam.d/common-account
-account     required      pam_succeed_if.so user ingroup ldapusers || groupadd sudo
+  # Create script to add users to sudo group
+  echo "Creating script to add users to sudo group..."
+  sudo bash -c 'cat <<EOF > /usr/local/sbin/add_to_sudo.sh
+#!/bin/bash
+usermod -aG sudo "\$PAM_USER"
 EOF'
+  sudo chmod +x /usr/local/sbin/add_to_sudo.sh
 
   # Display IP address and hostname
   IP_ADDR=$(hostname -I | awk '{print $1}')
