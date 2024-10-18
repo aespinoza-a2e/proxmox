@@ -58,6 +58,20 @@ start_routines() {
     echo "User cancelled the input. Exiting."
     exit 1
   fi
+
+  # Get password from user
+  PASSWORD=$(whiptail --passwordbox "Enter the CIFS password:" 8 78 --title "CIFS Configuration" 3>&1 1>&2 2>&3)
+
+  if [ $? -ne 0 ]; then
+    echo "User cancelled the input. Exiting."
+    exit 1
+  fi
+
+  # Create CIFS credentials file
+  sudo bash -c 'cat <<EOF > /etc/cifs-credentials
+  username=FRLAdmin
+  password='"$PASSWORD"'
+  EOF'
   
   # Variables
   LDAP_SERVER="ldap://10.10.20.66"
@@ -68,10 +82,13 @@ start_routines() {
   CIFS_PASSWORD="abB6k02KOHpe"
   CIFS_SERVER="10.10.20.5"
   CIFS_PATH="/LAB\040User"
+  BANNER_COMMANDS="\nfiglet \"A2e Galaxy\" | lolcat\ntoilet -f term -F border \"A2e Technologies\" | lolcat\n"
+
   
   # Install necessary packages
   echo "Installing necessary packages..."
   sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils libpam-mount
+  sudo apt update && sudo apt install -y figlet toilet lolcat
 
   # Start avahi-daemon service
   echo "Starting avahi-daemon service..."
@@ -135,14 +152,17 @@ EOF'
   # Restart necessary services
   echo "Restarting services..."
   systemctl restart nslcd || echo "nslcd service not found, skipping..."
+  systemctl restart ssh.server || echo "ssh service not found, skipping..."
   systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
+  
 
   # Create CIFS mount entry dynamically on user login using pam_mount
   echo "Configuring pam_mount for CIFS share mounting..."
   sudo bash -c 'cat <<EOF > /etc/security/pam_mount.conf.xml
-<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<?xml version="1.0" encoding="utf-8"?>
 <pam_mount>
-  <volume user=\"*\" fstype=\"cifs\" server=\"$CIFS_SERVER\" path=\"$CIFS_PATH/%(USER)\" mountpoint=\"/home/%(USER)/nfs_lab\" options=\"rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD\" />
+  <debug enable="0" />
+  <volume user="*" fstype="cifs" server="10.10.20.5" path="lab_user/%(USER)" mountpoint="/home/%(USER)/nfs_lab" options="rw,dir_mode=0777,file_mode=0777,credentials=/etc/cifs-credentials" />
 </pam_mount>
 EOF'
 
@@ -151,10 +171,20 @@ EOF'
   echo "%users ALL=(ALL) ALL" | sudo tee -a /etc/sudoers > /dev/null
   echo "%adminusers ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers > /dev/null
 
+  # Adding system wide banner
+  if ! grep -q "A2e Galaxy" /etc/profile; then
+      echo -e "$BANNER_COMMANDS" | sudo tee -a /etc/profile > /dev/null
+      echo "Banner added to /etc/profile successfully."
+  else
+      echo "Banner already exists in /etc/profile. No changes made."
+  fi
+
   # Display IP address and hostname
-  IP_ADDR=$(hostname -I | awk '{print $1}')
-  echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
-  echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
+  IP_ADDR=$(hostname -I | awk '{print $1}')  
+  #echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
+  #echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
+  echo "$NEW_HOSTNAME" | toilet -f term -F border | lolcat
+  echo "IP Address: $IP_ADDR" | toilet -f term -F border | lolcat
   echo "LDAP client configuration completed."
 }
 start_routines
