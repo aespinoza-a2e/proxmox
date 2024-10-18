@@ -87,7 +87,7 @@ start_routines() {
   # Install necessary packages
   echo "Installing necessary packages..."
   sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils libpam-mount
-  sudo apt update && sudo apt install -y figlet toilet lolcat
+  sudo apt update && sudo apt install -y figlet toilet lolcat qemu-guest-agent
 
   # Start avahi-daemon service
   echo "Starting avahi-daemon service..."
@@ -153,6 +153,7 @@ EOF'
   systemctl restart nslcd || echo "nslcd service not found, skipping..."
   systemctl restart ssh.service || echo "ssh service not found, skipping..."
   systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
+  systemctl start qemu-guest-agent
   
 
   # Create CIFS mount entry dynamically on user login using pam_mount
@@ -181,10 +182,10 @@ EOF'
   # Display IP address and hostname
   source ~/.bashrc
   IP_ADDR=$(hostname -I | awk '{print $1}')  
-  #echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
-  #echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
-  echo "$NEW_HOSTNAME" | toilet -f term -F border | lolcat
-  echo "IP Address: $IP_ADDR" | toilet -f term -F border | lolcat
+  echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
+  echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
+  #echo "$NEW_HOSTNAME" | toilet -f term -F border | lolcat
+  #echo "IP Address: $IP_ADDR" | toilet -f term -F border | lolcat
   echo "LDAP client configuration completed."
 }
 start_routines
