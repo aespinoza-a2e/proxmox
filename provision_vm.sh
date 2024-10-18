@@ -79,7 +79,6 @@ start_routines() {
   BIND_DN="cn=admin,dc=example,dc=com"
   BIND_PASSWORD="$PASSWORD"
   CIFS_USERNAME="FRLAdmin"
-  CIFS_PASSWORD="abB6k02KOHpe"
   CIFS_SERVER="10.10.20.5"
   CIFS_PATH="/LAB\040User"
   BANNER_COMMANDS="\nfiglet \"A2e Galaxy\" | lolcat\ntoilet -f term -F border \"A2e Technologies\" | lolcat\n"
@@ -152,7 +151,7 @@ EOF'
   # Restart necessary services
   echo "Restarting services..."
   systemctl restart nslcd || echo "nslcd service not found, skipping..."
-  systemctl restart ssh.server || echo "ssh service not found, skipping..."
+  systemctl restart ssh.service || echo "ssh service not found, skipping..."
   systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
   
 
@@ -180,6 +179,7 @@ EOF'
   fi
 
   # Display IP address and hostname
+  source ~/.bashrc
   IP_ADDR=$(hostname -I | awk '{print $1}')  
   #echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
   #echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
