@@ -144,7 +144,7 @@ EOF'
 <pam_mount>
   <volume user=\"*\" fstype=\"cifs\" server=\"$CIFS_SERVER\" path=\"$CIFS_PATH/%(USER)\" mountpoint=\"/home/%(USER)/nfs_lab\" options=\"rw,dir_mode=0777,file_mode=0777,vers=2.0,username=$CIFS_USERNAME,password=$CIFS_PASSWORD\" />
 </pam_mount>
-EOF"
+EOF'
 
   # Modify sudoers to add LDAP users
   echo "Modifying sudoers file to add LDAP users..."
