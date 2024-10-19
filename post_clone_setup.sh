@@ -64,6 +64,7 @@ start_routines() {
   #echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
   echo "$NEW_HOSTNAME" | toilet -f term -F border | lolcat
   echo "IP Address: $IP_ADDR" | toilet -f term -F border | lolcat
-  echo "LDAP client configuration completed."
+  echo "Guest configuration completed, restarting VM"
+  sudo reboot
 }
 start_routines
