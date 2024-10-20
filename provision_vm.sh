@@ -87,7 +87,8 @@ start_routines() {
   # Install necessary packages
   echo "Installing necessary packages..."
   sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils libpam-mount
-  sudo apt update && sudo apt install -y figlet toilet lolcat qemu-guest-agent
+  sudo sudo apt install -y figlet toilet lolcat
+  sudo sudo apt install -y qemu-guest-agent
 
   # Start avahi-daemon service
   echo "Starting avahi-daemon service..."
