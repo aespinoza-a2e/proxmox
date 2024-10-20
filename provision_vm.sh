@@ -10,7 +10,7 @@ RD=$(echo "\033[01;31m")
 YW=$(echo "\033[33m")
 GN=$(echo "\033[1;92m")
 CL=$(echo "\033[m")
-BFR="\r\033[K"
+
 HOLD="-"
 CM="${GN}✓${CL}"
 CROSS="${RD}✗${CL}"
@@ -89,22 +89,22 @@ password='"$PASSWORD"'
 EOF'
 
    # Install necessary packages
-   echo "Installing necessary packages..."
-   sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server xrdp avahi-daemon cifs-utils libpam-mount
+   echo -e "${BL}Installing necessary packages...${CL} \n"
+   sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server avahi-daemon cifs-utils libpam-mount
    sudo sudo apt install -y figlet toilet lolcat
    sudo sudo apt install -y qemu-guest-agent
 
    # Start avahi-daemon service
-   echo "Starting avahi-daemon service..."
+   echo -e "${BL}Starting avahi-daemon service...  ${CL} \n"
    systemctl enable --now avahi-daemon
 
    # Configure LDAP client
-   echo "Configuring LDAP client..."
+   echo -e "${BL}Configuring LDAP client...${CL} \n"
    sudo bash -c "echo 'URI $LDAP_SERVER' >> /etc/ldap/ldap.conf"
    sudo bash -c "echo 'BASE $BASE_DN' >> /etc/ldap/ldap.conf"
 
    # Configure NSS
-   echo "Configuring NSS..."
+   echo -e "${BL}Configuring NSS...${CL} \n"
    sudo bash -c 'cat <<EOF >> /etc/nsswitch.conf
 passwd:     files ldap
 shadow:     files ldap
@@ -112,7 +112,7 @@ group:      files ldap
 EOF'
   
    # Configure PAM for LDAP
-   echo "Configuring PAM for LDAP..."
+   echo -e "${BL}Configuring PAM for LDAP...${CL} \n"
    sudo bash -c 'cat <<EOF >> /etc/pam.d/common-auth
 auth        required      pam_env.so
 auth        sufficient    pam_unix.so try_first_pass
@@ -147,21 +147,21 @@ session     required      pam_mkhomedir.so skel=/etc/skel umask=077
 EOF'
   
    # Configure SSH to allow all users
-   echo "Configuring SSH to allow all users..."
+   echo -e "${BL}Configuring SSH to allow all users...${CL} \n"
    if grep -q '^AllowUsers' /etc/ssh/sshd_config; then
       sudo sed -i 's/^AllowUsers.*/#&/' /etc/ssh/sshd_config
    fi
    echo "AllowUsers *" | sudo tee -a /etc/ssh/sshd_config > /dev/null
 
    # Restart necessary services
-   echo "Restarting services..."
+   echo -e "${YW}Restarting services...${CL} \n"
    systemctl restart nslcd || echo "nslcd service not found, skipping..."
    systemctl restart ssh.service || echo "ssh service not found, skipping..."
-   systemctl enable --now ssh xrdp || echo "Failed to enable SSH or XRDP services."
+   systemctl enable --now ssh || echo "Failed to enable SSH services."
    systemctl start qemu-guest-agent
 
    # Create CIFS mount entry dynamically on user login using pam_mount
-   echo "Configuring pam_mount for CIFS share mounting..."
+   echo -e "${BL}Configuring pam_mount for CIFS share mounting...${CL} \n"
    sudo bash -c 'cat <<EOF > /etc/security/pam_mount.conf.xml
 <?xml version="1.0" encoding="utf-8"?>
 <pam_mount>
@@ -171,7 +171,7 @@ EOF'
 EOF'
 
    # Modify sudoers to add LDAP users
-   echo "Modifying sudoers file to add LDAP users..."
+   echo -e "${BL}Modifying sudoers file to add LDAP users...${CL} \n"
    echo "%users ALL=(ALL) ALL" | sudo tee -a /etc/sudoers > /dev/null
    echo "%adminusers ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers > /dev/null
 
@@ -183,11 +183,15 @@ EOF'
       echo "Banner already exists in /etc/profile. No changes made."
    fi
 
+   # Install XRDP (properly)
+   echo -e "${BL}Installing XRDP with custom script...${CL} \n"
+   wget -qO - https://raw.githubusercontent.com/aespinoza-a2e/proxmox/refs/heads/develop/xrdp-installer-1.5.2.sh | sudo -u a2e bash -s -- -l
+
    # Display IP address and hostname
    source ~/.bashrc
    IP_ADDR=$(hostname -I | awk '{print $1}')  
    echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
    echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
-   echo "LDAP client configuration completed."
+   echo "Guest configuration completed."
 }
 start_routines

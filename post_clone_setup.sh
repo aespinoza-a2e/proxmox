@@ -4,6 +4,12 @@
 # This script installs necessary packages, configures LDAP, PAM, and NSS, and enables SSH and XRDP services.
 
 # Colors
+RD=$(echo "\033[01;31m")
+YW=$(echo "\033[33m")
+GN=$(echo "\033[1;92m")
+CL=$(echo "\033[m")
+CM="${GN}✓${CL}"
+CROSS="${RD}✗${CL}"
 
 # Header
 header_info() {
@@ -17,15 +23,6 @@ header_info() {
                                                         |___/                
 EOF
 }
-
-RD=$(echo "\033[01;31m")
-YW=$(echo "\033[33m")
-GN=$(echo "\033[1;92m")
-CL=$(echo "\033[m")
-BFR="\r\033[K"
-HOLD="-"
-CM="${GN}✓${CL}"
-CROSS="${RD}✗${CL}"
 
 start_routines() {
    header_info
@@ -50,10 +47,12 @@ start_routines() {
       echo "User cancelled the input. Exiting."
       exit 1
    fi
-   echo "Setting hostname to $NEW_HOSTNAME..."
+   echo -e "${BL}Setting hostname to $NEW_HOSTNAME...${CL} \n"
    sudo hostnamectl set-hostname "$NEW_HOSTNAME"
 
+   # Install XRDP properly
    echo "Fixing XRDP configuration"
+   echo -e "${BL}Installing XRDP with custom script...${CL} \n"
    bash -c "$(wget -qLO - https://raw.githubusercontent.com/aespinoza-a2e/proxmox/refs/heads/develop/xrdp-installer-1.5.2.sh)" -- -l
 
    # Display IP address and hostname
