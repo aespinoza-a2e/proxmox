@@ -6,6 +6,7 @@
 # Colors
 RD=$(echo "\033[01;31m")
 YW=$(echo "\033[33m")
+BL=$(echo "\033[36m")
 GN=$(echo "\033[1;92m")
 CL=$(echo "\033[m")
 CM="${GN}✓${CL}"
