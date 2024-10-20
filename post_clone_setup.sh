@@ -3,6 +3,8 @@
 # Script to configure LDAP client and related settings
 # This script installs necessary packages, configures LDAP, PAM, and NSS, and enables SSH and XRDP services.
 
+# Colors
+
 # Header
 header_info() {
   clear
@@ -26,45 +28,40 @@ CM="${GN}✓${CL}"
 CROSS="${RD}✗${CL}"
 
 start_routines() {
-  header_info
+   header_info
 
-  # Confirm with the user before proceeding
-  if (whiptail --title "Confirmation" --yesno "This script will configure the host name and modify system settings. Do you want to continue?" 10 60); then
-    echo "User confirmed. Proceeding..."
-  else
-    echo "User cancelled. Exiting."
-    exit 1
-  fi
-  
-  # Check for root privileges
-  if [ "$EUID" -ne 0 ]; then 
-    echo "Please run as root"
-    exit
-  fi
+   # Confirm with the user before proceeding
+   if (whiptail --title "Confirmation" --yesno "This script will configure the host name and modify system settings. Do you want to continue?" 10 60); then
+      echo "User confirmed. Proceeding..."
+   else
+      echo "User cancelled. Exiting."
+      exit 1
+   fi
 
-  # Get new hostname from user
-  NEW_HOSTNAME=$(whiptail --inputbox "Enter the new hostname for this PC:" 8 78 --title "Hostname Configuration" 3>&1 1>&2 2>&3)
-  if [ $? -ne 0 ]; then
-    echo "User cancelled the input. Exiting."
-    exit 1
-  fi
-  echo "Setting hostname to $NEW_HOSTNAME..."
-  hostnamectl set-hostname "$NEW_HOSTNAME"
+   # Check if running as root
+   if [ "$EUID" -eq 0 ]; then
+      echo "This script should not be run as root. Please run it as a non-root user."
+      exit 1
+   fi
 
-  echo "Fixing XRDP configuration"
-  wget https://www.c-nergy.be/downloads/xrdp-installer-1.2.2.zip
-  unzip xrdp-installer-1.2.2.zip 
-  bash xrdp-installer-1.2.2.sh
+   # Get new hostname from user
+   NEW_HOSTNAME=$(whiptail --inputbox "Enter the new hostname for this PC:" 8 78 --title "Hostname Configuration" 3>&1 1>&2 2>&3)
+   if [ $? -ne 0 ]; then
+      echo "User cancelled the input. Exiting."
+      exit 1
+   fi
+   echo "Setting hostname to $NEW_HOSTNAME..."
+   sudo hostnamectl set-hostname "$NEW_HOSTNAME"
 
+   echo "Fixing XRDP configuration"
+   bash -c "$(wget -qLO - https://raw.githubusercontent.com/aespinoza-a2e/proxmox/refs/heads/develop/xrdp-installer-1.5.2.sh)" -- -l
 
-  # Display IP address and hostname
-  source ~/.bashrc
-  IP_ADDR=$(hostname -I | awk '{print $1}')  
-  #echo -e "\n${GN}Hostname:${CL} $NEW_HOSTNAME"
-  #echo -e "${GN}IP Address:${CL} $IP_ADDR\n"
-  echo "$NEW_HOSTNAME" | toilet -f term -F border | lolcat
-  echo "IP Address: $IP_ADDR" | toilet -f term -F border | lolcat
-  echo "Guest configuration completed, restarting VM"
-  sudo reboot
+   # Display IP address and hostname
+   source ~/.bashrc
+   IP_ADDR=$(hostname -I | awk '{print $1}')  
+   echo "$NEW_HOSTNAME" | toilet -f term -F border | lolcat
+   echo "IP Address: $IP_ADDR" | toilet -f term -F border | lolcat
+   echo "Guest configuration completed, restarting VM"
+   sudo reboot
 }
 start_routines
