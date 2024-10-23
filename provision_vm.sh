@@ -70,13 +70,6 @@ start_routines() {
    hostnamectl set-hostname "$NEW_HOSTNAME"
 
    # Get password from user
-   PASSWORD=$(whiptail --passwordbox "Enter the LDAP bind password:" 8 78 --title "LDAP Configuration" 3>&1 1>&2 2>&3)
-   if [ $? -ne 0 ]; then
-      echo "User cancelled the input. Exiting."
-      exit 1
-   fi
-
-   # Get password from user
    PASSWORD=$(whiptail --passwordbox "Enter the CIFS password:" 8 78 --title "CIFS Configuration" 3>&1 1>&2 2>&3)
    if [ $? -ne 0 ]; then
       echo "User cancelled the input. Exiting."
