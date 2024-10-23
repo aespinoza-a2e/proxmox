@@ -78,7 +78,7 @@ start_routines() {
 
   # Create CIFS credentials file
   sudo bash -c 'cat <<EOF > /etc/cifs-credentials
-username=FRLAdmin
+username=lab_user
 password='"$PASSWORD"'
 EOF'
 
