@@ -88,7 +88,11 @@ username=FRLAdmin
 password='"$PASSWORD"'
 EOF'
 
-   # Install necessary packages
+   # Stop unnatended updates while we are doing things
+   sudo systemctl disable unattended-upgrades
+   sudo systemctl stop unattended-upgrades
+
+   # Install necessary packages   
    echo -e "${BL}Installing necessary packages...${CL} \n"
    sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server avahi-daemon cifs-utils libpam-mount
    sudo sudo apt install -y figlet toilet lolcat
@@ -153,6 +157,16 @@ EOF'
    fi
    echo "AllowUsers *" | sudo tee -a /etc/ssh/sshd_config > /dev/null
 
+   # Update avahi configuration
+   echo -e "${BL}Configuring avahi-publishing settings...${CL} \n"
+   avhi_conf_path="/etc/avahi/avahi-daemon.conf"
+   if [[ -f "$avhi_conf_path" ]]; then
+      sudo sed -i 's/publish-workstation=no/publish-workstation=yes/' "$avhi_conf_path"
+      echo "The configuration has been updated."
+   else
+      echo "Error: The file does not exist."
+   fi
+
    # Restart necessary services
    echo -e "${YW}Restarting services...${CL} \n"
    systemctl restart nslcd || echo "nslcd service not found, skipping..."
@@ -186,6 +200,11 @@ EOF'
    # Install XRDP (properly)
    echo -e "${BL}Installing XRDP with custom script...${CL} \n"
    wget -qO - https://raw.githubusercontent.com/aespinoza-a2e/proxmox/refs/heads/develop/xrdp-installer-1.5.2.sh | sudo -u a2e bash -s -- -l
+
+
+   # Re-enable unnatended upgrades now that the config is  complete
+   #sudo systemctl enable unattended-upgrades
+   #sudo systemctl start unattended-upgrades
 
    # Display IP address and hostname
    source ~/.bashrc

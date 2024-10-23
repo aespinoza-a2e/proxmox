@@ -51,10 +51,23 @@ start_routines() {
    echo -e "${BL}Setting hostname to $NEW_HOSTNAME...${CL} \n"
    sudo hostnamectl set-hostname "$NEW_HOSTNAME"
 
-   # Install XRDP properly
-   echo "Fixing XRDP configuration"
-   echo -e "${BL}Installing XRDP with custom script...${CL} \n"
-   bash -c "$(wget -qLO - https://raw.githubusercontent.com/aespinoza-a2e/proxmox/refs/heads/develop/xrdp-installer-1.5.2.sh)" -- -l
+   # Update avahi configuration
+   echo -e "${BL}Configuring avahi-publishing settings...${CL} \n"
+   avhi_conf_path="/etc/avahi/avahi-daemon.conf"
+   if [[ -f "$avhi_conf_path" ]]; then
+      sudo sed -i 's/publish-workstation=no/publish-workstation=yes/' "$avhi_conf_path"
+      echo "The configuration has been updated."
+   else
+      echo "Error: The file does not exist."
+   fi
+
+   # Confirm if XRDP should be installed
+   if (whiptail --title "XRDP Installation" --yesno "Would you like to install XRDP?" 10 60); then
+      echo -e "${BL}Installing XRDP with custom script...${CL} \n"
+      bash -c "$(wget -qLO - https://raw.githubusercontent.com/aespinoza-a2e/proxmox/refs/heads/develop/xrdp-installer-1.5.2.sh)" -- -l
+   else
+      echo "XRDP installation skipped."
+   fi
 
    # Display IP address and hostname
    source ~/.bashrc
