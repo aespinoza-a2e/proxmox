@@ -90,7 +90,7 @@ EOF'
    echo -e "${BL}Installing necessary packages...${CL} \n"
    sudo apt update && sudo apt install -y ldap-utils libnss-ldapd libpam-ldapd openssh-server avahi-daemon cifs-utils libpam-mount
    sudo sudo apt install -y figlet toilet lolcat
-   sudo sudo apt install -y qemu-guest-agent
+   sudo sudo apt install -y qemu-guest-agent systemd-oomd
 
    # Start avahi-daemon service
    echo -e "${BL}Starting avahi-daemon service...  ${CL} \n"
@@ -167,6 +167,8 @@ EOF'
    systemctl restart ssh.service || echo "ssh service not found, skipping..."
    systemctl enable --now ssh || echo "Failed to enable SSH services."
    systemctl start qemu-guest-agent
+   systemctl enable earlyoom
+   systemctl start earlyoom
 
    # Create CIFS mount entry dynamically on user login using pam_mount
    echo -e "${BL}Configuring pam_mount for CIFS share mounting...${CL} \n"
