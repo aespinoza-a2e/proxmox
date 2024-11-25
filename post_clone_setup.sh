@@ -43,13 +43,19 @@ start_routines() {
    fi
 
    # Get new hostname from user
-   NEW_HOSTNAME=$(whiptail --inputbox "Enter the new hostname for this PC:" 8 78 --title "Hostname Configuration" 3>&1 1>&2 2>&3)
+   NEW_HOSTNAME=$(whiptail --inputbox "Enter the new hostname for this PC (leave empty to retain current one):" 8 78 --title "Hostname Configuration" 3>&1 1>&2 2>&3)
    if [ $? -ne 0 ]; then
       echo "User cancelled the input. Exiting."
       exit 1
    fi
-   echo -e "${BL}Setting hostname to $NEW_HOSTNAME...${CL} \n"
-   sudo hostnamectl set-hostname "$NEW_HOSTNAME"
+
+   # Check if the hostname entered is empty and skip changing if it is
+   if [ -z "$NEW_HOSTNAME" ]; then
+      echo "No new hostname entered. The hostname will remain unchanged."
+   else
+      echo -e "${BL}Setting hostname to $NEW_HOSTNAME...${CL} \n"
+      sudo hostnamectl set-hostname "$NEW_HOSTNAME"
+   fi
 
    # Update avahi configuration
    echo -e "${BL}Configuring avahi-publishing settings...${CL} \n"
@@ -60,6 +66,30 @@ start_routines() {
    else
       echo "Error: The file does not exist."
    fi
+
+# Confirm if custom PAM configurations should be applied
+if (whiptail --title "Custom PAM Configuration" --yesno "Would you like to apply custom PAM configurations?" 10 60); then
+   echo -e "Applying custom PAM configurations...\n"
+
+   # Back up the original common password file
+   sudo cp /etc/pam.d/common-password /etc/pam.d/common-password.bak
+
+   # Write new password settings file that allows users to change their own password
+   sudo bash -c 'cat <<EOF > /etc/pam.d/common-password
+password        requisite                     pam_pwquality.so retry=3
+password        [success=1 default=ignore]    pam_succeed_if.so uid >= 1000 quiet
+password        [success=2 default=ignore]    pam_unix.so obscure use_authtok try_first_pass yescrypt
+password        sufficient                    pam_ldap.so use_authtok try_first_pass
+password        requisite                     pam_deny.so
+password        required                      pam_permit.so
+password        optional                      pam_mount.so disable_interactive
+password        optional                      pam_gnome_keyring.so
+EOF'
+
+   echo "Custom PAM configurations have been applied."
+else
+   echo "Custom PAM configuration step skipped."
+fi
 
    # Confirm if XRDP should be installed
    if (whiptail --title "XRDP Installation" --yesno "Would you like to install XRDP?" 10 60); then

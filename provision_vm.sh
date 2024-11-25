@@ -128,11 +128,19 @@ account     required      pam_permit.so
 
 EOF'
   
-   sudo bash -c 'cat <<EOF >> /etc/pam.d/common-password
-password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
-password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok
-password    sufficient    pam_ldap.so use_authtok
-password    required      pam_deny.so
+   # Back up the original common password file
+   sudo cp /etc/pam.d/common-password /etc/pam.d/common-password.bak
+
+   # Write new password settings file that allows users to change their own password
+   sudo bash -c 'cat <<EOF > /etc/pam.d/common-password
+password        requisite                     pam_pwquality.so retry=3
+password        [success=1 default=ignore]    pam_succeed_if.so uid >= 1000 quiet
+password        [success=2 default=ignore]    pam_unix.so obscure use_authtok try_first_pass yescrypt
+password        sufficient                    pam_ldap.so use_authtok try_first_pass
+password        requisite                     pam_deny.so
+password        required                      pam_permit.so
+password        optional                      pam_mount.so disable_interactive
+password        optional                      pam_gnome_keyring.so
 EOF'
 
    sudo bash -c 'cat <<EOF >> /etc/pam.d/common-session
@@ -143,7 +151,7 @@ session     required      pam_unix.so
 session     optional      pam_ldap.so
 session     required      pam_mkhomedir.so skel=/etc/skel umask=077
 EOF'
-  
+
    # Configure SSH to allow all users
    echo -e "${BL}Configuring SSH to allow all users...${CL} \n"
    if grep -q '^AllowUsers' /etc/ssh/sshd_config; then
