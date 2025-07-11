@@ -43,5 +43,4 @@ ssh-keyscan github.com >> ~/.ssh/known_hosts
 chmod 644 ~/.ssh/known_hosts
 EOF
 
-echo "??  Ed25519 key installed on $h. You can now SSH there and run:"
-echo "    git clone git@github.com:<your-user>/<your-repo>.git"
+echo "??  Ed25519 key installed on $h"
