@@ -41,6 +41,9 @@ chmod 600 ~/.ssh/id_ed25519
 chmod 644 ~/.ssh/id_ed25519.pub
 ssh-keyscan github.com >> ~/.ssh/known_hosts
 chmod 644 ~/.ssh/known_hosts
+touch ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+grep -qxF "$(cat ~/.ssh/id_ed25519.pub)" ~/.ssh/authorized_keys || cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
 EOF
 
 echo "??  Ed25519 key installed on $h"
