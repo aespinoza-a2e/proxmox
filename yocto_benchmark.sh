@@ -50,5 +50,6 @@ benchmark() {
 
 header_info
 start_routines
+benchmark
 
 
