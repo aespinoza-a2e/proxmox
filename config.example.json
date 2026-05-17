@@ -1,0 +1,14 @@
+{
+  "SshUser": "root",
+  "SshPass": "CHANGE_ME",
+  "ConnectTimeoutSec": 5,
+  "CorosyncWarnMB": 500,
+  "PvestatdWarnMB": 500,
+  "FlaskCtHost": "10.0.0.1",
+  "FlaskCtId": 100,
+  "FlaskHostsPath": "/root/flask_app/hosts.txt",
+  "Nodes": [
+    { "IP": "10.0.0.1", "Label": "node-1" },
+    { "IP": "10.0.0.2", "Label": "node-2" }
+  ]
+}
